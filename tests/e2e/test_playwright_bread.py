@@ -42,7 +42,7 @@ def test_bread_positive_flow(page, fastapi_server):
     first_view_link.click()
     page.wait_for_url("**/dashboard/view/**")
     calc_id = page.url.rstrip("/").split("/")[-1]
-    page.wait_for_selector("text=Calculation Details")
+    page.wait_for_selector("#calculationCard:not(.hidden)")
 
     # Edit (PUT /calculations/{id})
     page.click("#editLink")
