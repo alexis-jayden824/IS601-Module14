@@ -224,6 +224,32 @@ document.addEventListener('DOMContentLoaded', function() {
     successAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
+  function isValidOperation(type) {
+    return ['addition', 'subtraction', 'multiplication', 'division'].includes(type);
+  }
+
+  function parseInputsStrict(rawInputs) {
+    const rawParts = rawInputs.split(',').map(part => part.trim());
+    if (rawParts.length < 2) {
+      return { error: 'Please enter at least two numbers separated by commas.' };
+    }
+
+    const inputs = [];
+    for (const part of rawParts) {
+      if (part === '') {
+        return { error: 'Input values cannot be empty.' };
+      }
+
+      const num = Number(part);
+      if (!Number.isFinite(num)) {
+        return { error: `Invalid number: ${part}` };
+      }
+      inputs.push(num);
+    }
+
+    return { inputs };
+  }
+
   // Load the calculations from the API
   async function loadCalculations() {
     try {
@@ -405,13 +431,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const submitButton = form.querySelector('button[type="submit"]');
     const originalButtonContent = submitButton.innerHTML;
     
-    const inputsVal = document.getElementById('calcInputs').value;
-    const inputs = inputsVal.split(',')
-      .map(num => parseFloat(num.trim()))
-      .filter(num => !isNaN(num));
+    const selectedType = document.getElementById('calcType').value;
+    if (!isValidOperation(selectedType)) {
+      showError('Please choose a valid operation type.');
+      return;
+    }
 
-    if (inputs.length < 2) {
-      showError('Please enter at least two valid numbers, separated by commas');
+    const inputsVal = document.getElementById('calcInputs').value;
+    const parsed = parseInputsStrict(inputsVal);
+
+    if (parsed.error) {
+      showError(parsed.error);
       
       // Highlight the input field with an error state
       const inputField = document.getElementById('calcInputs');
@@ -425,8 +455,15 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
+    const inputs = parsed.inputs;
+
+    if (selectedType === 'division' && inputs.some((value, index) => index > 0 && value === 0)) {
+      showError('Division by zero is not allowed.');
+      return;
+    }
+
     const newCalc = {
-      type: document.getElementById('calcType').value,
+      type: selectedType,
       inputs
     };
 

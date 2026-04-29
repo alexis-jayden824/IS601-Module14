@@ -269,6 +269,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   const calcInputsInput = document.getElementById('calcInputs');
   const editForm = document.getElementById('editCalculationForm');
   const previewResult = document.getElementById('previewResult');
+
+  function isValidOperation(type) {
+    return ['addition', 'subtraction', 'multiplication', 'division'].includes(type);
+  }
+
+  function parseInputsStrict(rawInputs) {
+    const rawParts = rawInputs.split(',').map(part => part.trim());
+    if (rawParts.length < 2) {
+      return { error: 'Please enter at least two numbers separated by commas.' };
+    }
+
+    const inputs = [];
+    for (const part of rawParts) {
+      if (part === '') {
+        return { error: 'Input values cannot be empty.' };
+      }
+
+      const num = Number(part);
+      if (!Number.isFinite(num)) {
+        return { error: `Invalid number: ${part}` };
+      }
+      inputs.push(num);
+    }
+
+    return { inputs };
+  }
   
   // Function to calculate result for preview
   function calculatePreview(type, inputs) {
@@ -309,11 +335,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Function to update the preview
   function updatePreview() {
     const type = calcTypeInput.value;
-    const inputsString = calcInputsInput.value;
-    const inputs = inputsString
-      .split(',')
-      .map(num => parseFloat(num.trim()))
-      .filter(num => !isNaN(num));
+    if (!isValidOperation(type)) {
+      previewResult.innerHTML = `
+        <p class="text-red-500 text-center">Unsupported operation type.</p>
+      `;
+      return;
+    }
+
+    const parsed = parseInputsStrict(calcInputsInput.value);
     
     // Create appropriate operator symbol
     let operator;
@@ -335,14 +364,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // Update preview section
-    if (inputs.length < 2) {
+    if (parsed.error) {
       previewResult.innerHTML = `
         <p class="text-gray-500 text-center">
-          Enter at least two valid numbers to see the preview
+          ${parsed.error}
         </p>
       `;
       return;
     }
+
+    const inputs = parsed.inputs;
     
     const result = calculatePreview(type, inputs);
     
@@ -424,14 +455,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const originalButtonContent = submitButton.innerHTML;
     
     // Parse input string into an array of floats
-    const newInputs = calcInputsInput.value
-      .split(',')
-      .map(num => parseFloat(num.trim()))
-      .filter(num => !isNaN(num));
+    const currentType = calcTypeInput.value;
+    if (!isValidOperation(currentType)) {
+      showError('Unsupported operation type.');
+      return;
+    }
+
+    const parsed = parseInputsStrict(calcInputsInput.value);
 
     // Validate inputs
-    if (newInputs.length < 2) {
-      showError('Please enter at least two valid numbers separated by commas.');
+    if (parsed.error) {
+      showError(parsed.error);
       
       // Add error class to the input
       calcInputsInput.classList.add('border-red-500', 'bg-red-50');
@@ -457,9 +491,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       return;
     }
+
+    const newInputs = parsed.inputs;
     
     // Check for division by zero
-    if (calcTypeInput.value === 'division' && newInputs.some((value, index) => index > 0 && value === 0)) {
+    if (currentType === 'division' && newInputs.some((value, index) => index > 0 && value === 0)) {
       showError('Division by zero is not allowed.');
       return;
     }

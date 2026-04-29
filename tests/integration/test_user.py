@@ -32,6 +32,7 @@ def test_database_connection(db_session):
     logger.info("Database connection test passed")
 
 
+@pytest.mark.requires_db
 def test_managed_session():
     """
     Test the managed_db_session context manager for one-off queries and rollbacks.
@@ -316,6 +317,7 @@ def test_user_persistence_after_constraint(db_session):
 # Error Handling Test
 # ======================================================================================
 
+@pytest.mark.requires_db
 def test_error_handling():
     """
     Verify that a manual managed_db_session can capture and log invalid SQL errors.

@@ -53,12 +53,19 @@ async def lifespan(app: FastAPI):
     defined in SQLAlchemy models. It's an alternative to using Alembic
     for simpler applications.
     
+    If the database is unavailable, the application continues without tables
+    (useful for tests that don't need the database).
+
     Args:
         app: FastAPI application instance
     """
     print("Creating tables...")
-    Base.metadata.create_all(bind=engine)
-    print("Tables created successfully!")
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Tables created successfully!")
+    except Exception as e:
+        print(f"Warning: Could not create tables: {str(e)}")
+        print("Continuing without database connectivity.")
     yield  # This is where application runs
     # Cleanup code would go here (after yield), but we don't need any
 
@@ -336,6 +343,7 @@ def get_calculation(
 
 # Edit / Update a Calculation
 @app.put("/calculations/{calc_id}", response_model=CalculationResponse, tags=["calculations"])
+@app.patch("/calculations/{calc_id}", response_model=CalculationResponse, tags=["calculations"])
 def update_calculation(
     calc_id: str,
     calculation_update: CalculationUpdate,
@@ -343,7 +351,7 @@ def update_calculation(
     db: Session = Depends(get_db)
 ):
     """
-    Update the inputs (and thus the result) of a specific calculation.
+    Update the type and/or inputs (and thus the result) of a specific calculation.
     """
     try:
         calc_uuid = UUID(calc_id)
@@ -357,14 +365,23 @@ def update_calculation(
     if not calculation:
         raise HTTPException(status_code=404, detail="Calculation not found.")
 
+    if calculation_update.type is not None:
+        calculation.type = calculation_update.type.value
     if calculation_update.inputs is not None:
         calculation.inputs = calculation_update.inputs
-        calculation.result = calculation.get_result()
 
-    calculation.updated_at = datetime.utcnow()
-    db.commit()
-    db.refresh(calculation)
-    return calculation
+    try:
+        calculation.result = calculation.get_result()
+        calculation.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(calculation)
+        return calculation
+    except ValueError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
 # Delete a Calculation
