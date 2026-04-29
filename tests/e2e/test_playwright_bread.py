@@ -35,7 +35,7 @@ def test_bread_positive_flow(page, fastapi_server):
 
     # Browse (GET /calculations)
     page.wait_for_selector("#calculationsTable tr")
-    page.wait_for_selector("text=addition")
+    page.locator("#calculationsTable tr").filter(has_text="Addition").first.wait_for()
 
     # Read (GET /calculations/{id})
     first_view_link = page.locator("a[href^='/dashboard/view/']").first
