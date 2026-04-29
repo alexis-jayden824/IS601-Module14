@@ -1,7 +1,7 @@
 # app/auth/jwt.py
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Union
-from jose import jwt, JWTError
+import jwt
 from passlib.context import CryptContext
 from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
@@ -123,7 +123,7 @@ async def decode_token(
             detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except JWTError:
+    except jwt.InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
